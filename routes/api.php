@@ -14,6 +14,7 @@ Route::group(['prefix' => 'auth'], function ($router) {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify', [AuthController::class, 'verify']);
+    Route::post('logout', [AuthController::class, 'logout']);
     
 });
 
@@ -49,6 +50,8 @@ Route::middleware(['auth:api', 'user'])->group(function () {
     Route::get('/eventView', [ProductController::class, 'event']);
     
 });
+Route::post('/send-message', [ChatController::class, 'sendMessage'])->middleware('auth:api');
+Route::post('/receive-message', [ChatController::class, 'receiveMessage'])->middleware('auth:api');
 
 
 

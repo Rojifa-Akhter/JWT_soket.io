@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use App\Mail\Sendotp;
+use Firebase\JWT\JWT;
 
 class AuthController extends Controller
 {
@@ -22,7 +23,7 @@ class AuthController extends Controller
 
         ]);
 
-        $otp=rand(100000,999999);
+        $otp = rand(100000, 999999);
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -30,20 +31,18 @@ class AuthController extends Controller
             'password' => bcrypt($validated['password']),
         ]);
 
-        $user->otp=$otp;
+        $user->otp = $otp;
         $user->save();
         Mail::to($request->email)->send(new SendOtp($otp));
 
-        $message= 'Registration successful, please verify your email.';
+        $message = 'Registration successful, please verify your email.';
 
-        if ($user->role =='admin') {
-            $message= 'Welcome Admin! please verify your email.';
-        }
-        elseif($user->role =='customer'){
-            $message= 'Welcome Customer! please verify your email.';
-        }
-        elseif($user->role =='user'){
-            $message= 'Welcome User! please verify your email.';
+        if ($user->role == 'admin') {
+            $message = 'Welcome Admin! please verify your email.';
+        } elseif ($user->role == 'customer') {
+            $message = 'Welcome Customer! please verify your email.';
+        } elseif ($user->role == 'user') {
+            $message = 'Welcome User! please verify your email.';
         }
 
         return response()->json(['message' => $message], 200);
@@ -53,20 +52,28 @@ class AuthController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if ($token = $this->guard('api')->attempt($credentials)) {
-            $user = $this->guard('api')->user();
-
-            // Check if the email is verified
+        if ($token = Auth::guard('api')->attempt($credentials)) {
+            $user = Auth::guard('api')->user();   
             if (!$user->hasVerifiedEmail()) {
                 return response()->json(['error' => 'Email not verified. Please check your email.'], 403);
             }
 
+            $jwtPayload = [
+                'id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+                'iat' => time(),
+                'exp' => time() + (60 * 60) // Token expires in 1 hour
+            ];
+            $jwtToken = JWT::encode($jwtPayload, 'your_jwt_secret', 'HS256');
+
             return response()->json([
                 'access_token' => $token,
                 'token_type' => 'bearer',
-                'expires_in' => $this->guard('api')->factory()->getTTL() * 60,
+                'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
+                'jwt_token' => $jwtToken, // JWT for Socket.io
                 'role' => $user->role,
-                'email_verified_at' => $user->email_verified_at, // Show verification time
+                'email_verified_at' => $user->email_verified_at,
             ]);
         }
 
@@ -106,22 +113,23 @@ class AuthController extends Controller
     }
 
 
-    public function verify(Request $request){
+    public function verify(Request $request)
+    {
 
-       $validator = Validator::make($request->all(),[
+        $validator = Validator::make($request->all(), [
             'otp' => 'required|numeric',
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response($validator->messages(), 200);
-        } 
-        
-        $user=User::where('otp',$request->otp)->first();
-        if($user){
-            $user->otp=null;
-            $user->	email_verified_at=now();
+        }
+
+        $user = User::where('otp', $request->otp)->first();
+        if ($user) {
+            $user->otp = null;
+            $user->email_verified_at = now();
             $user->save();
         }
-        return response()->json(['message' => 'Email is verified'],200);
+        return response()->json(['message' => 'Email is verified'], 200);
     }
 }
