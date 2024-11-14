@@ -50,8 +50,15 @@ Route::middleware(['auth:api', 'user'])->group(function () {
     Route::get('/eventView', [ProductController::class, 'event']);
     
 });
-Route::post('/send-message', [ChatController::class, 'sendMessage'])->middleware('auth:api');
-Route::post('/receive-message', [ChatController::class, 'receiveMessage'])->middleware('auth:api');
+Route::middleware(['auth:api'])->group(function () {
+    Route::post('/send-message', [ChatController::class, 'sendMessage']);
+    Route::get('/show', [ChatController::class, 'show']);
+    Route::get('/receive/{id}', [ChatController::class, 'receive']);
+    Route::post('/connected_users', [ChatController::class, 'connect']);
+    Route::delete('/connected_users/{socket_id}', [ChatController::class, 'disconnect']);
+
+});
+
 
 
 

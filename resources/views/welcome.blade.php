@@ -1,26 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Socket.IO chat</title>
-    <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
-
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socket.io simple chat</title>
+    {{-- <link rel="stylesheet" href="./style.css" /> --}}
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
-    </form>
+
+    <div class="content">
+        <h1>Laravel and Socket.IO</h1>
+        <p id="message">Waiting for message...</p>
+        <h1 id="m"></h1>
+        <p id="n"></p>
+        <p id="x"></p>
+        <p id="y"></p>
+
+        <!-- Include the Socket.IO client library -->
+        <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+        <script>
+            // Connect to the Socket.IO server
+            const socket = io('http://192.168.10.14:3000'); // Replace with your server's address
+
+            // Listen for messages from the server
+            socket.on('message', function(data) {
+                document.getElementById('message').innerText = data.text;
+            });
+
+            socket.on("message2",(data)=>{
+                console.log(data)
+                document.getElementById('m').innerText = data.text;
+            })
+
+            socket.on("socket",(data)=>{
+                document.getElementById("n").innerHTML = data.text
+            })
+
+            socket.on("message2", (data)=>{
+                document.getElementById("x").innerHTML = data.text
+            })
+            socket.on("message3", (data)=>{
+                document.getElementById("y").innerHTML = data.text
+            })
+
+            // Example: Send a message to the server
+            socket.emit('message', { text: 'Hello from Laravel!' });
+            socket.emit('frontenddata', { text: 'Hello from Laravel2!' });
+
+            socket.emit('frontenddata',{ text: 'hello socket ..' })
+
+            socket.emit('message2',
+                {
+                    text: "How are you?"
+                }
+            )
+            socket.emit('message3',
+                {
+                    text: "I am fine. Thank You."
+                }
+            )
+        </script>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
 
   </body>
-
 </html>
