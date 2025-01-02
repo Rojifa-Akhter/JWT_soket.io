@@ -16,29 +16,37 @@ class roleController extends Controller
     //admin
     public function customerCreate(Request $request)
     {
-        $validator = $request->validate([
+        $validator = Validator::make($request->all(),[
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:6',
         ]);
+
+         if ($validator->fails()){
+            return response()->json(['status'=>false,'message'=>$validator->errors()],404);     }
         $customer = User::create([
-            'name' => $validator['name'],
-            'email' => $validator['email'],
-            'role' => 'customer',
-            'password' => bcrypt($validator['password']),
+            'name' => $request->name,
+            'email' => $request->email,
+            'role' => 'CUSTOMER',
+            'password' => bcrypt($request->password),
         ]);
         $customer->save();
 
-        return response()->json(['message' => 'Customer create successfully', 'customer' => $customer], 201);
+        return response()->json([
+            'status'=>'success',
+            'message' => 'Customer create successfully', 'customer' => $customer], 201);
     }
 
     public function deleteUser(Request $request)
     {
-        $validated = $request->validate([
+        $validated = Validator::make($request->all(),[
             'user_id' => 'required|exists:users,id',
         ]);
 
-        $user = User::findOrFail($validated['user_id']);
+        if($validated->fails()){
+            return response()->json(['status'=>false,'message'=>$validated->errors(),401]);
+        }
+        $user = User::findOrFail('user_id');
         $user->delete();
 
         return response()->json(['message' => 'User deleted successfully'], 200);
@@ -49,5 +57,5 @@ class roleController extends Controller
 
         return response()->json(['message' => $deletedUsers], 200);
     }
-    
+
 }

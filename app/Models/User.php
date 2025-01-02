@@ -11,13 +11,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
-    
+
     use HasFactory, Notifiable,SoftDeletes;
-    protected $fillable = [
-        'name', 'phone', 'contact', 'password', 'role', 'image', 'otp', 'otp_expires_at', 'status'
-    ];
+    protected $guarded = ['id'];
     protected $dates = ['deleted_at'];
-    
+
 
     protected $hidden = [
         'password',
@@ -30,7 +28,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'email_verified_at' => 'datetime',
         ];
     }
-   
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

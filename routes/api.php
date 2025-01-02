@@ -15,6 +15,7 @@ Route::group(['prefix' => 'auth'], function ($router) {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify', [AuthController::class, 'verify']);
+    Route::post('resendOtp', [AuthController::class, 'resendOtp']);
     Route::post('logout', [AuthController::class, 'logout']);
 
 });
@@ -24,11 +25,11 @@ Route::middleware(['auth:api','CheckAdmin'])->group(function(){
     Route::post('refresh', [AuthController::class, 'refresh']);
 });
 // Admins
-Route::middleware(['auth:api', 'admin'])->group(function () {
+Route::middleware(['auth:api', 'ADMIN'])->group(function () {
     Route::put('/approved/{id}', [ProductController::class, 'approve']);
     Route::put('/reject/{id}', [ProductController::class, 'reject']);
     Route::post('/customerCreate', [RoleController::class, 'customerCreate']);
-    Route::post('/deleteUser', [RoleController::class, 'deleteUser']);
+    Route::delete('/deleteUser', [RoleController::class, 'deleteUser']);
     Route::get('/showSoftDeletedUsers', [RoleController::class, 'SoftDeletedUsers']);
 });
 

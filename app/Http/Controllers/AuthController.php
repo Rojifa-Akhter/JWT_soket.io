@@ -17,28 +17,32 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        // return $request;
         $validated = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email',
-            // 'role' => 'required|in:admin,user,customer',
-            'password' => 'required|string|min:6|confirmed',
-
+            'password' => 'required|string|min:6',
         ]);
 
         if ($validated->fails()) {
             return response()->json(['status' => false, 'message' => $validated->errors()], 200);
         }
+
         $otp = rand(100000, 999999);
         $otp_expiries_at = now()->addMinutes(10);
+
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => $request->email, // Ensure this is included
             'password' => bcrypt($request->password),
             'otp_expiries_at' => $otp_expiries_at,
         ]);
 
+        // Save OTP to the user
         $user->otp = $otp;
         $user->save();
+
+        // Send OTP via email
         Mail::to($request->email)->send(new SendOtp($otp));
 
         $message = 'Registration successful, please verify your email.';
@@ -53,6 +57,7 @@ class AuthController extends Controller
 
         return response()->json(['message' => $message], 200);
     }
+
     //resent otp
     public function resendOtp(Request $request)
     {

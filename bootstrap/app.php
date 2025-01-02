@@ -16,12 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'admin' => CheckAdmin::class,
-            'customer' => CheckCustomer::class,
-            'user' => CheckUser::class,
+            'ADMIN' => CheckAdmin::class,
+            'CUSTOMER' => CheckCustomer::class,
+            'USER' => CheckUser::class,
         ]);
     })
-    
+
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
