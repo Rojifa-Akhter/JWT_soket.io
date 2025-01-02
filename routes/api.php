@@ -7,6 +7,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ChatController;
+use App\Models\PushSubscription;
 use Illuminate\Foundation\Auth\EmailVerificationNotifiable;
 
 
@@ -15,7 +16,7 @@ Route::group(['prefix' => 'auth'], function ($router) {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify', [AuthController::class, 'verify']);
     Route::post('logout', [AuthController::class, 'logout']);
-    
+
 });
 
 Route::middleware(['auth:api','CheckAdmin'])->group(function(){
@@ -48,7 +49,7 @@ Route::middleware(['auth:api', 'user'])->group(function () {
     Route::get('/index', [ProductController::class, 'index']);
     Route::get('/projectView', [ProductController::class, 'project']);
     Route::get('/eventView', [ProductController::class, 'event']);
-    
+
 });
 Route::middleware(['auth:api'])->group(function () {
     Route::post('/send-message', [ChatController::class, 'sendMessage']);
@@ -59,6 +60,10 @@ Route::middleware(['auth:api'])->group(function () {
 
 });
 
-
+Route::post("push-subscribe", function (Request $request){
+    PushSubscription::create([
+        'data'=>$request->getContent()
+    ]);
+});
 
 

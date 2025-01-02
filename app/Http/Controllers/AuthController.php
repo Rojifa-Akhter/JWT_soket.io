@@ -2,33 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
+use App\Mail\Sendotp;
+use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Support\Facades\Validator;
-use App\Mail\Sendotp;
-use Firebase\JWT\JWT;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $validated = $request->validate([
+        $validated = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email',
-            'role' => 'required|in:admin,user,customer',
+            // 'role' => 'required|in:admin,user,customer',
             'password' => 'required|string|min:6|confirmed',
 
         ]);
 
+        if ($validated->fails()) {
+            return response()->json(['status' => false, 'message' => $validated->errors()], 200);
+        }
         $otp = rand(100000, 999999);
+        $otp_expiries_at = now()->addMinutes(10);
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'role' => $validated['role'],
-            'password' => bcrypt($validated['password']),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'otp_expiries_at' => $otp_expiries_at,
         ]);
 
         $user->otp = $otp;
@@ -47,72 +53,36 @@ class AuthController extends Controller
 
         return response()->json(['message' => $message], 200);
     }
-
-    public function login(Request $request)
+    //resent otp
+    public function resendOtp(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $request->validate(['email' => 'required|email']);
 
-        if ($token = Auth::guard('api')->attempt($credentials)) {
-            $user = Auth::guard('api')->user();   
-            if (!$user->hasVerifiedEmail()) {
-                return response()->json(['error' => 'Email not verified. Please check your email.'], 403);
-            }
+        $user = User::where('email', $request->email)->first();
 
-            $jwtPayload = [
-                'id' => $user->id,
-                'email' => $user->email,
-                'role' => $user->role,
-                'iat' => time(),
-                'exp' => time() + (60 * 60) // Token expires in 1 hour
-            ];
-            $jwtToken = JWT::encode($jwtPayload, 'your_jwt_secret', 'HS256');
-
-            return response()->json([
-                'access_token' => $token,
-                'token_type' => 'bearer',
-                'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
-                'jwt_token' => $jwtToken, // JWT for Socket.io
-                'role' => $user->role,
-                'email_verified_at' => $user->email_verified_at,
-            ]);
+        if (!$user) {
+            return response()->json(['error' => 'Email not registered.'], 404);
         }
 
-        return response()->json(['error' => 'Unauthorized'], 401);
-    }
+        $otp = rand(100000, 999999);
 
+        DB::table('users')->updateOrInsert(
+            ['email' => $request->email],
+            ['otp' => $otp, 'created_at' => now()]
+        );
 
-    public function me()
-    {
-        return response()->json($this->guard('api')->user());
-    }
+        try {
+            Mail::to($request->email)->send(new sendOTP($otp));
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json(['error' => 'Failed to resend OTP.'], 500);
+        }
 
-    public function logout()
-    {
-        $this->guard('api')->logout();
-
-        return response()->json(['message' => 'Successfully logged out']);
-    }
-
-    public function refresh()
-    {
-        return $this->respondWithToken($this->guard()->refresh());
-    }
-
-    protected function respondWithToken($token)
-    {
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => $this->guard('api')->factory()->getTTL() * 60
-        ]);
+            'status' => 'success',
+            'message' => 'OTP resent to your email.'], 200);
     }
-
-    public function guard()
-    {
-        return Auth::guard('api');
-    }
-
-
+    //verify otp
     public function verify(Request $request)
     {
 
@@ -121,7 +91,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response($validator->messages(), 200);
+            return response(['status' => false, 'message' => $validator->errors()], 200);
         }
 
         $user = User::where('otp', $request->otp)->first();
@@ -132,4 +102,56 @@ class AuthController extends Controller
         }
         return response()->json(['message' => 'Email is verified'], 200);
     }
+
+    public function login(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Email not found.'], 404);
+        }
+
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid password.'], 401);
+        }
+
+        $user = Auth::guard('api')->user();
+        $user->image = $user->image ?? asset('img/1.webp');
+
+        return response()->json([
+            'status' => 'success',
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'user_information' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'email_verified_at' => $user->email_verified_at,
+                'image' => $user->image,
+            ],
+        ], 200);
+    }
+
+    public function guard()
+    {
+        return Auth::guard('api');
+    }
+    public function logout()
+    {
+        if (!auth('api')->check()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User is not authenticated.',
+            ], 401);
+        }
+
+        auth('api')->logout();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Successfully logged out.',
+        ]);
+    }
+
 }
