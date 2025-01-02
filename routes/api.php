@@ -26,18 +26,23 @@ Route::middleware(['auth:api','CheckAdmin'])->group(function(){
 });
 // Admins
 Route::middleware(['auth:api', 'ADMIN'])->group(function () {
-    Route::put('/approved/{id}', [ProductController::class, 'approve']);
-    Route::put('/reject/{id}', [ProductController::class, 'reject']);
+
     Route::post('/customerCreate', [RoleController::class, 'customerCreate']);
     Route::delete('/deleteUser', [RoleController::class, 'deleteUser']);
     Route::get('/showSoftDeletedUsers', [RoleController::class, 'SoftDeletedUsers']);
+
+    Route::put('/approved/{id}', [ProductController::class, 'approve']);
+    Route::put('/reject/{id}', [ProductController::class, 'reject']);
+
 });
 
 // Customers
-Route::middleware(['auth:api', 'customer'])->group(function () {
+Route::middleware(['auth:api', 'CUSTOMER'])->group(function () {
+
+    Route::post('/add-project', [CustomerController::class, 'addProject']);
+    Route::post('/edit-project/{id}', [CustomerController::class, 'update']);
+
     Route::get('/view', [ProductController::class, 'view']);
-    Route::post('/addProject', [CustomerController::class, 'addProject']);
-    Route::put('/editProject/{id}', [CustomerController::class, 'editProject']);
     Route::delete('/deleteProject/{id}', [CustomerController::class, 'deleteProject']);
     Route::post('/{projectId}/addEvent', [CustomerController::class, 'addEvent']);
     Route::put('/{projectId}/editEvent/{id}', [CustomerController::class, 'editEvent']);
@@ -54,8 +59,9 @@ Route::middleware(['auth:api', 'user'])->group(function () {
 });
 Route::middleware(['auth:api'])->group(function () {
     Route::post('/send-message', [ChatController::class, 'sendMessage']);
-    Route::get('/show', [ChatController::class, 'show']);
+    Route::get('/show-message', [ChatController::class, 'show']);
     Route::get('/receive/{id}', [ChatController::class, 'receive']);
+    
     Route::post('/connected_users', [ChatController::class, 'connect']);
     Route::delete('/connected_users/{socket_id}', [ChatController::class, 'disconnect']);
 

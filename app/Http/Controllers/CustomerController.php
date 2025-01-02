@@ -5,32 +5,46 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Project;
 use App\Models\Event;
+use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller
 {
     //customer
     public function addProject(Request $request)
     {
-        $validated = $request->validate([
+        $validated = Validator::make($request->all(),[
             'project_name' => 'required|string|max:255'
         ]);
+        if ($validated->fails()) {
+            return response()->json(['status'=>false, 'message'=>$validated->errors()]);
+        }
 
         $project = Project::create([
-            'project_name' => $validated['project_name']
+            'project_name' => $request->project_name
         ]);
 
-        return response()->json(['message' => 'Project created successfully'], 201);
+        return response()->json([
+            'status'=> 'success',
+            'message'=>$project
+        ], 201);
     }
-    public function editProject(Request $request, $id)
+    public function update(Request $request, $id)
     {
-        $validated = $request->validate([
+        $validated = Validator::make($request->all(),[
             'project_name' => 'required|string|max:255'
         ]);
+    if ($validated->fails()) {
+        return response()->json(['status'=>false,'message'=>$validated->errors()]);
+    }
+
         $project = Project::findOrFail($id);
-        $project->project_name = $validated['project_name'];
+        $project->project_name = $request->project_name;
 
         $project->save();
-        return response()->json(['message' => 'Project updated successfully'], 200);
+        return response()->json([
+            'status'=>'success',
+            'message'=>$project
+        ], 200);
     }
     public function deleteProject($id)
     {

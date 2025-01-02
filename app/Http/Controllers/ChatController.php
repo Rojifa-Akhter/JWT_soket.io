@@ -2,25 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\connectedUser;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Models\connectedUser;
-use Illuminate\Support\Js;
 
 class ChatController extends Controller
 {
     public function sendMessage(Request $request)
     {
-
+        //sender=user,    receiver=customer
         $message = Message::create([
             'sender_id' => Auth::id(),
             'receiver_id' => $request->receiver_id,
             'content' => $request->content,
         ]);
 
-        return response()->json(['message' => 'Message sent successfully', 'data' => $message]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Message sent successfully', 'data' => $message]);
     }
 
     public function show(Request $request)
@@ -34,7 +35,7 @@ class ChatController extends Controller
         $messages = Message::orderBy('created_at', 'asc')->get();
 
         return response()->json([
-            'connected_users' => $connectedUsers,  
+            'connected_users' => $connectedUsers,
             'messages' => $messages,
         ]);
     }
@@ -42,12 +43,7 @@ class ChatController extends Controller
     public function receive(Request $request, $id)
     {
         $currentUserId = auth()->id();
-
-        $connectedUsers = ConnectedUser::with('user')
-            ->where('user_id', '!=', auth()->user()->id)
-            ->get()
-            ->unique('user_id');
-
+        
         $messages = Message::where(function ($query) use ($currentUserId, $id) {
             $query->where('sender_id', $currentUserId)
                 ->where('receiver_id', $id);
@@ -60,10 +56,14 @@ class ChatController extends Controller
             ->with('sender')
             ->get();
 
-        // Return messages along with sender details
+        Message::where('sender_id', $id)
+            ->where('receiver_id', $currentUserId)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
         return response()->json([
             'message' => 'Messages fetched successfully',
-            'data' => $messages
+            'data' => $messages,
         ]);
     }
 

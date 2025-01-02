@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('messages', function (Blueprint $table) {        
-            $table->foreignId('sender_id')->nullable()->constrained('users');        
-            $table->foreignId('receiver_id')->nullable()->constrained('users');  
+        Schema::create('messages', function (Blueprint $table) {
+            $table->foreignId('sender_id')->nullable()->constrained('users');
+            $table->foreignId('receiver_id')->nullable()->constrained('users');
             $table->text('content');
-            $table->boolean('is_read')->default(false);      
+            $table->boolean('is_read')->default(false);
             $table->timestamps();
         });
     }
